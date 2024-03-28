@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "pypathfinding"
+version = "0.1.0"
+description = "AI Algorithms for path finding problem."
+authors = ["Giorgio Zoppi <giorgio.zoppi@yenflow.com>"]
+license = "Apache License 2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+ruff = "^0.3.4"
+flake8 = "^7.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+pypathfinding = "pypathfinding.__main__:main"
+
+[tool.poetry.plugins."poetry-dynamic-versioning"]
+version-file = "pyproject.toml:version"
+
+[tool.poetry.source]
+include = ["pathfinding"]
