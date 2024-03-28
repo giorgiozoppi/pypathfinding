@@ -14,12 +14,3 @@ flake8 = "^7.0.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-pypathfinding = "pypathfinding.__main__:main"
-
-[tool.poetry.plugins."poetry-dynamic-versioning"]
-version-file = "pyproject.toml:version"
-
-[tool.poetry.source]
-include = ["pathfinding"]

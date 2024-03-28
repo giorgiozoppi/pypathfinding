@@ -8,10 +8,16 @@ class GraphType(Enum):
     UNDIRECTED = 2
 
 class Vertex:
-    def __init__(self, name: str):
+    def __init__(self, name: str, index: int = 0):
         self._name: str = name
         self._weight: int = 0
-
+        self._index: int = index
+    @property   
+    def index(self)->int:
+        return self._index
+    @index.setter
+    def index(self, index: int)->None:
+        self._index = index
     @property
     def name(self) -> str:
         return self._name
@@ -67,21 +73,22 @@ class Graph:
 @dataclass
 class SearchInfo:
     visited: Set[Vertex]
-    vertex_path: List[Vertex]
-
+    edge_to: List[Vertex]
+    
 def dfs(graph: Graph, vertex: Vertex, end_vertex: Vertex, info: SearchInfo) -> List[Vertex]:
     # we reached the end vertex
-    if vertex == end_vertex:
-        return info.vertex_path
-    
     info.visited.add(vertex)
-    info.vertex_path.append(vertex)
+    
     for neighbor in graph.get_neighbors(vertex):
         if neighbor not in info.visited:
-                dfs(neighbor)
+            info.edge_to[neighbor] = vertex
+            dfs(graph=graph, vertex=neighbor, end_vertex=end_vertex, info=info)
+       
+            
+        
       
 def dfs_search(graph: Graph, start_vertex: Vertex, end_vertex: Vertex) -> List[Vertex]:
-    info = SearchInfo(visited=set(), vertex_path=[])
+    info = SearchInfo(visited=set(), edge_to=[])
     dfs(graph, start_vertex, end_vertex, info)
-    return info.vertex_path
+    print(info.edge_to)
 
