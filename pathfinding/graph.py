@@ -2,6 +2,7 @@ import copy
 from typing import List, Dict, Set
 from enum import Enum
 from uuid import uuid4
+from dataclasses import dataclass
 class GraphType(Enum):
     DIRECTED = 1
     UNDIRECTED = 2
@@ -47,6 +48,9 @@ class Graph:
     def adjacency_list(self) -> Dict[Vertex, List[Vertex]]:
         return self._adj_list
     
+    def get_neighbors(self, vertex: Vertex) -> Set[Vertex]:
+        return self._adj_list[vertex]
+    
     def add_edge(self, vertex1: Vertex, vertex2: Vertex, weight: int) -> None:
         destination_vertex = vertex2
         destination_vertex.weight = weight
@@ -60,4 +64,24 @@ class Graph:
             source_vertex.weight = weight
             self._adj_list[vertex2].add(source_vertex)
  
+@dataclass
+class SearchInfo:
+    visited: Set[Vertex]
+    vertex_path: List[Vertex]
+
+def dfs(graph: Graph, vertex: Vertex, end_vertex: Vertex, info: SearchInfo) -> List[Vertex]:
+    # we reached the end vertex
+    if vertex == end_vertex:
+        return info.vertex_path
+    
+    info.visited.add(vertex)
+    info.vertex_path.append(vertex)
+    for neighbor in graph.get_neighbors(vertex):
+        if neighbor not in info.visited:
+                dfs(neighbor)
+      
+def dfs_search(graph: Graph, start_vertex: Vertex, end_vertex: Vertex) -> List[Vertex]:
+    info = SearchInfo(visited=set(), vertex_path=[])
+    dfs(graph, start_vertex, end_vertex, info)
+    return info.vertex_path
 
