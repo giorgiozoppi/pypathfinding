@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "pypathfinding"
+name = "pathfinding"
 version = "0.1.0"
 description = "AI Algorithms for path finding problem."
 authors = ["Giorgio Zoppi <giorgio.zoppi@yenflow.com>"]
