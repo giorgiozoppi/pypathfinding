@@ -35,6 +35,8 @@ class Vertex:
         self._index: int = index
         self._predecessor: Optional[Vertex] = None
         self._distance: int = math.inf
+        self.h_value: int = 0
+        self.g_value: int = 0
 
     @property
     def distance(self) -> int:
@@ -98,6 +100,9 @@ class PriorityQueue:
             for vertex in adjlist:
                 self._queue.append(QueueItem(vertex))
         heapq.heapify(self._queue)
+
+    def insert(self, vertex: Vertex) -> None:
+        heapq.heappush(self._queue, QueueItem(vertex))
 
     def extract_min(self) -> Vertex:
         min_item = heapq.heappop(self._queue)
@@ -326,3 +331,29 @@ def djikstra_search(
     end_search = perf_counter_ns()
     performance = end_search - search_start
     return len(path) > 1, path, performance
+
+
+def astar_search(
+    graph: Graph, start_vertex: Vertex, end_vertex: Vertex
+) -> Optional[bool | deque[Vertex]]:
+    if start_vertex is None or end_vertex is None:
+        return False, [], 0
+    search_start = perf_counter_ns()
+    vertex_map = graph.get_vertexes()
+    start_vertex = graph.find_vertex_by_name(start_vertex.name)
+    for name, vertex in vertex_map.items():
+        vertex.distance = math.inf
+        vertex.predecessor = None
+        if name == start_vertex.name:
+            vertex.distance = 0
+    queue = PriorityQueue()
+    queue.insert(start_vertex)
+    path = deque()
+    while not queue.is_empty():
+        current_vertex = queue.extract_min()
+        if current_vertex.name == end_vertex.name:
+            path.appendleft(current_vertex)
+            break
+        else:
+            pass
+    return len(path) > 1, path, 0

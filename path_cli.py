@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import typer
 import rich
 from rich.prompt import Prompt
@@ -17,7 +19,7 @@ def test(algorithm_name: str, filename: str):
         if success:
             csv_path = ''.join([f"{vertex.name} -> " for vertex in path])
             rich.print(f"[green bold]Path found dfs search from {start.name} -> {end.name}[/green bold]: {csv_path}")
-            rich.print(f"[green bold]Elapsed Time: {performance}[/green bold]")
+            rich.print(f"[green bold]Elapsed Time: {performance} ns[/green bold]")
         elif start and end:
             rich.print(f"[red bold]No path found bfs search from {start.name} -> {end.name}[/red bold]")
         else:
@@ -28,7 +30,7 @@ def test(algorithm_name: str, filename: str):
         if success:
             csv_path = ''.join([f"{vertex.name} -> " for vertex in path])
             rich.print(f"[green bold]Path found bfs search from {start.name} -> {end.name}[/green bold]: {csv_path}")
-            rich.print(f"[green bold]Elapsed Time: {performance}[/green bold]")
+            rich.print(f"[green bold]Elapsed Time: {performance} ns[/green bold]")
         elif start and end:
             rich.print(f"[red bold]No path found bfs search from {start.name} -> {end.name}[/red bold]")
         else:
@@ -40,7 +42,7 @@ def test(algorithm_name: str, filename: str):
         if success:
             csv_path = ''.join([f"{vertex.name} -> " for vertex in path])
             rich.print(f"[green bold]Path found shortest path search from {start.name} -> {end.name}[/green bold]: {csv_path}")
-            rich.print(f"[green bold]Elapsed Time: {performance}[/green bold]")
+            rich.print(f"[green bold]Elapsed Time: {performance} ns[/green bold]")
         elif start and end:
             rich.print(f"[red bold]No path found shortest path search from {start.name} -> {end.name}[/red bold]")
         else:
