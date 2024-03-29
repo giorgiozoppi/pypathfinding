@@ -7,7 +7,6 @@ from typing import List, Dict, Set, Optional, Any
 from enum import Enum
 from uuid import uuid4
 from dataclasses import dataclass
-from typing import Optional
 
 
 class GraphType(Enum):
@@ -135,6 +134,12 @@ class Graph:
     def get_neighbors(self, vertex: Vertex) -> Set[Vertex]:
         return self._adj_list[vertex]
 
+    def find_vertex_by_name(self, name: str) -> Optional[Vertex]:
+        for vertex in self._adj_list.keys():
+            if vertex.name == name:
+                return vertex
+        return None
+
     def load_from_json(self, name: str) -> None:
         current_index = 0
         with open(name, mode="r", encoding="utf-8") as file:
@@ -173,7 +178,6 @@ class SearchInfo:
 
 
 def dfs(graph: Graph, vertex: Vertex, info: SearchInfo) -> List[Vertex]:
-
     info.visited.add(vertex)
     for neighbor in graph.get_neighbors(vertex):
         if neighbor not in info.visited:
@@ -297,24 +301,10 @@ def djikstra_search(
 
 if __name__ == "__main__":
     graph = Graph(unique_name="graph_dfs", graph_type=GraphType.UNDIRECTED)
-    galway_vertex = Vertex("Galway")
-    athlone_vertex = Vertex("Athlone")
-    dublin_vertex = Vertex("Dublin")
-    dundalk_vertex = Vertex("Dundalk")
-    belfast_vertex = Vertex("Belfast")
-    tipperary_vertex = Vertex("Tipperary")
-    v7 = Vertex("Cork")
-    v8 = Vertex("Limerick")
-    v9 = Vertex("Waterford")
-    v10 = Vertex("Sligo")
-    v11 = Vertex("Castlebar")
-    v12 = Vertex("Letterkenny")
-    v13 = Vertex("Wexford")
-    graph.add_edge(v1, v2, 85)
-    graph.add_edge(v2, v3, 100)
-    graph.add_edge(v3, v4, 125)
-    graph.add_edge(v4, v5, 83)
-    state, path = dfs_search(graph, v3, v1)
+    graph.load_from_json("graph.json")
+    source = graph.find_vertex_by_name("Galway")
+    destination = graph.find_vertex_by_name("Belfast")
+    state, path = dfs_search(graph, source, destination)
     if state:
         path = [vertex.name for vertex in path]
         print("A path was found:", " -> ".join(path))
