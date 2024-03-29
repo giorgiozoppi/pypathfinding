@@ -291,13 +291,28 @@ class PriorityQueue:
         heapq.heapify(self._queue)
 
     def insert(self, vertex: Vertex) -> None:
+        """Insert a vertex in the queue.
+
+        Args:
+            vertex (Vertex): Vertex
+        """        
         heapq.heappush(self._queue, make_queue_item(vertex, kind=self._algorithm))
 
     def extract_min(self) -> Vertex:
+        """Extract the Vertex with minimum value from the queue.
+
+        Returns:
+            Vertex: Vertex with minimum value.
+        """        
         min_item = heapq.heappop(self._queue)
         return min_item.vertex
 
     def update(self, vertex: Vertex) -> None:
+        """Add a vertex to the queue and restore the min-heap property.
+
+        Args:
+            vertex (Vertex): Vertex to add.
+        """        
         for item in self._queue:
             if item.vertex.name == vertex.name:
                 item.set_min_index(vertex)
@@ -305,10 +320,19 @@ class PriorityQueue:
                 break
 
     def is_empty(self) -> bool:
+        """Return True if the queue is empty.
+
+        Returns:
+            bool: True if the queue is empty.
+        """        
         return len(self._queue) == 0
 
 
 class Graph:
+    """Class to represent a graph.
+       A graph can be directed or undirected and it has a unique name.
+       During Vertex insertion, we assign a unique index to each vertex.
+    """    
     def __init__(
         self,
         unique_name: str = uuid4().hex,
@@ -322,20 +346,47 @@ class Graph:
 
     @property
     def name(self) -> str:
+        """Return the name of the graph.
+
+        Returns:
+            str: Name of the graph.
+        """        
         return self._graph_name
 
     @property
     def graph_type(self) -> GraphType:
+        """Return the type of the graph. It can be directed or undirected.
+
+        Returns:
+            GraphType: Type of the graph.
+        """        
         return self._graph_type
 
     @property
-    def adjacency_list(self) -> Dict[Vertex, List[Vertex]]:
+    def adjacency_list(self) -> Dict[str, List[Vertex]]:
+        """Return the adjacency list of the graph.
+
+        Returns:
+            Dict[str, List[Vertex]]: The adjacency list of the graph. Each vertex is indexed by name.
+        """        
         return self._adj_list
 
     def get_vertexes(self) -> Dict[str, Vertex]:
+        """Return all vertexes in the graph indexed by name.
+
+        Returns:
+            Dict[str, Vertex]: All vertexes in the graph indexed by name.
+        """        
         return self._vertexes
 
     def get_neighbors(self, vertex: Vertex) -> Generator[Vertex, None, None]:
+        """Return all neighbors of a vertex.
+
+        Args:
+            vertex (Vertex): Vertex
+        Yields:
+            Generator[Vertex, None, None]: Generator of all neighbors of the vertex.
+        """        
         neighbors = self._adj_list[vertex.name]
         for neighbor in neighbors:
             current_vertex = self.find_vertex_by_name(neighbor[0])
@@ -343,11 +394,24 @@ class Graph:
             yield current_vertex
 
     def find_vertex_by_name(self, name: str) -> Optional[Vertex]:
+        """Find a vertex by name.
+
+        Args:
+            name (str): name of the vertex.
+
+        Returns:
+            Optional[Vertex]: Vertex if found, None otherwise.`
+        """        
         if name in self._vertexes:
             return self._vertexes[name]
         return None
 
     def load_from_json(self, name: str) -> None:
+        """Load from a json file the graph. The semantich is the same as the graphml file.
+
+        Args:
+            name (str): Path to the json file.
+        """        
         current_index = 0
         with open(name, mode="r", encoding="utf-8") as file:
             data = json.load(file)
@@ -360,6 +424,16 @@ class Graph:
                 current_index = current_index + 2
 
     def add_edge(self, vertex1: Vertex, vertex2: Vertex, weight: int) -> None:
+        """It adds an edge between two vertexes with a weight.
+           If the vertexes are not in the adjacency list, they will be added.
+           If the graph is undirected, it will add the reverse edge.
+           Also it keeps sorted the adjacency list by weight. 
+           This might be useful where we don't want to use a priority queue (BFS,DFS).
+        Args:
+            vertex1 (Vertex): Source vertex.
+            vertex2 (Vertex): Destination vertex.
+            weight (int): Weight of the edge.
+        """        
         # keep adj list using vertexes name as key and a list of vertexes as value
         if vertex1.name not in self._adj_list:
             # each vertex will have a unique index
@@ -389,11 +463,23 @@ class Graph:
 
 @dataclass
 class SearchInfo:
+    """Context to pass thru recursive calls of the search algorithms.
+    """    
     visited: Set[Vertex]
     edge_to: List[Vertex]
 
 
 def dfs(graph: Graph, vertex: Vertex, info: SearchInfo) -> List[Vertex]:
+    """Define the depth first search algorithm.
+
+    Args:
+        graph (Graph): Graph
+        vertex (Vertex): Source vertex
+        info (SearchInfo): Context to pass thru recursive calls of the search algorithms.
+
+    Returns:
+        List[Vertex]: List of vertexes in the path.
+    """    
     info.visited.add(vertex)
     for neighbor in graph.get_neighbors(vertex):
         if neighbor not in info.visited:
@@ -402,6 +488,16 @@ def dfs(graph: Graph, vertex: Vertex, info: SearchInfo) -> List[Vertex]:
 
 
 def bfs(graph: Graph, vertex: Vertex, info: SearchInfo) -> List[Vertex]:
+    """Define the breadth first search algorithm.
+
+    Args:
+        graph (Graph): Graph
+        vertex (Vertex): Source vertex
+        info (SearchInfo): Context to keep info about visited vertexes.
+
+    Returns:
+        List[Vertex]: List of vertexes in the path.
+    """    
     queue = deque()
     queue.append(vertex)
     info.visited.add(vertex)
@@ -416,7 +512,17 @@ def bfs(graph: Graph, vertex: Vertex, info: SearchInfo) -> List[Vertex]:
 
 def dfs_search(
     graph: Graph, start_vertex: Vertex, end_vertex: Vertex
-) -> Optional[bool | deque[Vertex]]:
+) -> Optional[bool | deque[Vertex] | float]:
+    """Perform a depth first search on the graph.
+
+    Args:
+        graph (Graph): Graph
+        start_vertex (Vertex): Source vertex
+        end_vertex (Vertex): Destination vertex
+
+    Returns:
+        Optional[bool | deque[Vertex] | float]: Path found, path from source to destination, execution time.
+    """    
     if start_vertex is None or end_vertex is None:
         return False, [], 0
     search_start = perf_counter_ns()
@@ -449,7 +555,17 @@ def dfs_search(
 
 def bfs_search(
     graph: Graph, start_vertex: Vertex, end_vertex: Vertex
-) -> Optional[bool | deque[Vertex]]:
+) -> Optional[bool | deque[Vertex]| float]:
+    """Perform a breadth first search on the graph.
+
+    Args:
+        graph (Graph): Graph
+        start_vertex (Vertex): Source vertex
+        end_vertex (Vertex): Destination vertex
+
+    Returns:
+        Optional[bool | deque[Vertex]| float]: Path found, path from source to destination, execution time.
+    """    
     if start_vertex is None or end_vertex is None:
         return False, [], 0
     search_start = perf_counter_ns()
@@ -485,7 +601,18 @@ def bfs_search(
 
 def djikstra_search(
     graph: Graph, start_vertex: Vertex, end_vertex: Vertex
-) -> Optional[bool | deque[Vertex]]:
+) -> Optional[bool | deque[Vertex]| float]:
+    """Perform Djikstra Shortest Path algorithm on the graph.
+
+    Args:
+        graph (Graph): Path
+        start_vertex (Vertex): Source vertex
+        end_vertex (Vertex): Destination vertex
+
+    Returns:
+        Optional[bool | deque[Vertex]| float]: Path found, path from source to destination, execution time.
+    """    
+    
     if start_vertex is None or end_vertex is None:
         return False, [], 0
     search_start = perf_counter_ns()
