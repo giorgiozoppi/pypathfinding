@@ -22,11 +22,10 @@ def test_add_edge_first_time():
     Galway = Vertex("Galway")
     graph.add_edge(Dublin, Galway, 187)
     assert "Dublin" in graph.adjacency_list.keys()
-    # assert Galway in graph.adjacency_list["Dublin"]
-    # assert Galway.weight == 187
+    assert Galway in graph.adjacency_list["Dublin"]
+    assert Galway.weight == 187
 
 
-"""
 def test_add_edge_existing_vertex():
     graph = Graph()
     Dublin = Vertex("Dublin")
@@ -39,7 +38,6 @@ def test_add_edge_existing_vertex():
     assert Westport in graph.adjacency_list["Dublin"]
     assert Galway.weight == 187
     assert Westport.weight == 222
-"""
 
 
 def test_load_from_json():
@@ -78,6 +76,7 @@ def test_not_found_vertex_by_name():
     vertex = graph.find_vertex_by_name("London")
     assert vertex is None
 
+
 def test_dfs_fail_search():
     graph = Graph()
     graph.load_from_json(GRAPH_FILE)
@@ -89,6 +88,7 @@ def test_dfs_fail_search():
     state, _ = dfs_search(graph, source, destination)
     assert state is False
 
+
 def test_bfs_fail_search():
     graph = Graph()
     graph.load_from_json(GRAPH_FILE)
@@ -99,6 +99,7 @@ def test_bfs_fail_search():
     destination = graph.find_vertex_by_name("Tipperary")
     state, _ = bfs_search(graph, source, destination)
     assert state is False
+
 
 def test_dfs_search():
     graph = Graph()

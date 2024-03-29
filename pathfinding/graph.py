@@ -17,6 +17,8 @@ from enum import Enum
 from uuid import uuid4
 from dataclasses import dataclass
 
+# we suppose to have a kind of graphml file transposed to json
+# in the same folder as the graph.py file
 GRAPH_FOLDER = os.path.dirname(os.path.abspath(__file__))
 GRAPH_FILE = os.path.join(GRAPH_FOLDER, "graph.json")
 
@@ -221,6 +223,8 @@ def bfs(graph: Graph, vertex: Vertex, info: SearchInfo) -> List[Vertex]:
 def dfs_search(
     graph: Graph, start_vertex: Vertex, end_vertex: Vertex
 ) -> Optional[bool | deque[Vertex]]:
+    if start_vertex is None or end_vertex is None:
+        return False, [], 0
     search_start = perf_counter_ns()
     info = SearchInfo(visited=set(), edge_to=[])
     # Initialize the edge_to list
@@ -252,6 +256,8 @@ def dfs_search(
 def bfs_search(
     graph: Graph, start_vertex: Vertex, end_vertex: Vertex
 ) -> Optional[bool | deque[Vertex]]:
+    if start_vertex is None or end_vertex is None:
+        return False, [], 0
     search_start = perf_counter_ns()
     info = SearchInfo(visited=set(), edge_to=[])
     # Initialize the edge_to list
@@ -286,6 +292,8 @@ def bfs_search(
 def djikstra_search(
     graph: Graph, start_vertex: Vertex, end_vertex: Vertex
 ) -> Optional[bool | deque[Vertex]]:
+    if start_vertex is None or end_vertex is None:
+        return False, [], 0
     search_start = perf_counter_ns()
     vertex_map = graph.get_vertexes()
     start_vertex = graph.find_vertex_by_name(start_vertex.name)
