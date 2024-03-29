@@ -1,3 +1,4 @@
+import os
 import json
 import math
 import heapq
@@ -7,6 +8,9 @@ from typing import List, Dict, Set, Optional, Any
 from enum import Enum
 from uuid import uuid4
 from dataclasses import dataclass
+
+GRAPH_FOLDER = os.path.dirname(os.path.abspath(__file__))
+GRAPH_FILE = os.path.join(GRAPH_FOLDER, "graph.json")
 
 
 class GraphType(Enum):
@@ -114,7 +118,7 @@ class Graph:
         unique_name: str = uuid4().hex,
         graph_type: GraphType = GraphType.UNDIRECTED,
     ):
-        self._adj_list: Dict[Vertex, Set[Vertex]] = {}
+        self._adj_list: Dict[Vertex, List[Vertex]] = {}
         self._graph_name = unique_name
         self._graph_type = graph_type
         self._last_vertex_index = 0
@@ -144,7 +148,8 @@ class Graph:
         current_index = 0
         with open(name, mode="r", encoding="utf-8") as file:
             data = json.load(file)
-            edges = data["edges"]
+            edges = data["graph"]["edges"]
+            self._graph_name = data["graph"]["id"]
             for edge in edges:
                 vertex1 = Vertex(edge["source"], current_index)
                 vertex2 = Vertex(edge["target"], current_index + 1)
@@ -157,18 +162,25 @@ class Graph:
         if vertex1 not in self._adj_list:
             # each vertex will have a unique index
             vertex1.index = self._last_vertex_index
-            self._adj_list[vertex1] = set()
+            self._adj_list[vertex1] = []
             self._last_vertex_index = self._last_vertex_index + 1
 
         if vertex2 not in self._adj_list:
             vertex2.index = self._last_vertex_index
             self._last_vertex_index = self._last_vertex_index + 1
-            self._adj_list[vertex2] = set()
-        self._adj_list[vertex1].add(destination_vertex)
+            self._adj_list[vertex2] = []
+        self._adj_list[vertex1].append(destination_vertex)
+        self._adj_list[vertex1] = sorted(
+            self._adj_list[vertex1], key=lambda x: x.weight
+        )
+
         if self._graph_type == GraphType.UNDIRECTED:
             source_vertex = vertex1
             source_vertex.weight = weight
-            self._adj_list[vertex2].add(source_vertex)
+            self._adj_list[vertex2].append(source_vertex)
+            self._adj_list[vertex2] = sorted(
+                self._adj_list[vertex2], key=lambda x: x.weight
+            )
 
 
 @dataclass
@@ -226,12 +238,9 @@ def dfs_search(
             break
 
     path.appendleft(start_vertex)
-    for vertex in path:
-        print(vertex)
     end_search = perf_counter_ns()
     performance = end_search - search_start
-    print(f"Elapsed time: {performance} nanoseconds")
-    return True, path
+    return True, path, performance
 
 
 def bfs_search(
@@ -266,12 +275,13 @@ def bfs_search(
     end_search = perf_counter_ns()
     performance = end_search - search_start
     print(f"Elapsed time: {performance} nanoseconds")
-    return True, path
+    return True, path, performance
 
 
 def djikstra_search(
     graph: Graph, start_vertex: Vertex, end_vertex: Vertex
 ) -> Optional[bool | deque[Vertex]]:
+    search_start = perf_counter_ns()
     for vertex in graph.adjacency_list.keys():
         vertex.weight = math.inf
         vertex.predecessor = None
@@ -287,7 +297,7 @@ def djikstra_search(
                     neighbor.distance = current_vertex.distance + neighbor.weight
                     neighbor.predecessor = current_vertex
     path = deque()
-    if working_set.contains(end_vertex):
+    if end_vertex in working_set:
         current_vertex: Vertex = end_vertex
         while True:
             path.appendleft(current_vertex)
@@ -295,8 +305,14 @@ def djikstra_search(
             if current_vertex.index == start_vertex.index:
                 break
     else:
+        end_search = perf_counter_ns()
+        performance = end_search - search_start
+        print(f"Elapsed time: {performance} nanoseconds")
         return False, []
-    return True, path
+    end_search = perf_counter_ns()
+    performance = end_search - search_start
+    print(f"Elapsed time: {performance} nanoseconds")
+    return True, path, performance
 
 
 if __name__ == "__main__":
