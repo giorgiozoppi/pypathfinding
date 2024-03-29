@@ -24,6 +24,7 @@ def test_add_edge_first_time():
     names = [x for x in graph.adjacency_list.keys()]
     assert "Dublin" in names
 
+
 def test_add_edge_existing_vertex():
     graph = Graph()
     Dublin = Vertex("Dublin")
