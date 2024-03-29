@@ -1,0 +1,45 @@
+{
+    "graph": {
+      "id": "IrelandMap",
+      "edgedefault": "undirected",
+      "nodes": [
+        { "id": "Athlone" },
+        { "id": "Belfast" },
+        { "id": "Carlow"},
+        { "id": "Castelbar"},
+        { "id": "Cork"},
+        { "id": "Dublin" },
+        { "id": "Galway" },
+        { "id": "Killarney" },
+        { "id": "Letterkenny"},    
+        { "id": "Limerick" },
+        { "id": "Tipperary"},
+        { "id": "Wexford" },
+        { "id": "Waterford" },
+        { "id": "Sligo" },
+        { "id": "Dundalk"}
+        
+      ],
+      "edges": [
+        { "id": "e0", "source": "Athlone", "target": "Galway", "weight": 85 },
+        { "id": "e1", "source": "Athlone", "target": "Dublin", "weight": 124 },
+        { "id": "e2", "source": "Athlone", "target": "Tipperary", "weight": 126 },
+        { "id": "e3", "source": "Belfast", "target": "Dundalk", "weight": 83 },
+        { "id": "e4", "source": "Belfast", "target": "Sligo", "weight": 214 },
+        { "id": "e5", "source": "Carlow", "target": "Dublin", "weight": 90 },
+        { "id": "e6", "source": "Carlow", "target": "Waterford", "weight": 80 },
+        { "id": "e7", "source": "Castelbar", "target": "Galway", "weight": 77 },
+        { "id": "e8", "source": "Castelbar", "target": "Sligo", "weight": 67 },
+        { "id": "e9", "source": "Cork", "target": "Killarney", "weight": 88 },
+        { "id": "e11", "source": "Cork", "target": "Waterford", "weight": 121 },
+        { "id": "e12", "source": "Dublin", "target": "Dundalk", "weight": 81 },
+        { "id": "e14", "source": "Dublin", "target": "Wexford", "weight": 141 },
+        { "id": "e15", "source": "Galway", "target": "Limerick", "weight": 112 },
+        { "id": "e16", "source": "Killarney", "target": "Limerick", "weight": 110 },
+        { "id": "e18", "source": "Letterkenny", "target": "Sligo", "weight": 133 },
+        { "id": "e19", "source": "Limerick", "target": "Tipperary", "weight": 39 },
+        { "id": "e20", "source": "Tipperary", "target": "Waterford", "weight": 89 },
+        { "id": "e21", "source": "Wexford", "target": "Waterford", "weight": 59 }
+      ]
+    }
+  }
