@@ -100,23 +100,28 @@ def test_dfs_search():
     assert search_time > 0
 
 
-"""
 def test_bfs_search():
     graph = Graph()
     Dublin = Vertex("Dublin")
     Galway = Vertex("Galway")
     Westport = Vertex("Westport")
     Sligo = Vertex("Sligo")
-    graph.add_edge(Dublin, Westport, 222)
+    graph.add_edge(Dublin, Westport, 50)
     graph.add_edge(Dublin, Galway, 100)
+    graph.add_edge(Westport, Galway, 10)
     graph.add_edge(Westport, Sligo, 300)
     graph.add_edge(Sligo, Galway, 500)
 
-    state, path, search_time = bfs_search(graph, Dublin, Westport)
+    state, path, search_time = bfs_search(graph, Dublin, Sligo)
     assert state is True
-    assert path == [Dublin, Westport]
+    assert state is True
+    assert path[0].name == Dublin.name
+    assert path[1].name == Westport.name
+    assert path[2].name == Sligo.name
     assert search_time > 0
 
+
+"""
 def test_djikstra_search():
     graph = Graph()
     Dublin = Vertex("Dublin")

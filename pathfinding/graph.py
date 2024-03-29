@@ -190,7 +190,7 @@ class Graph:
             self._vertexes[vertex1.name] = vertex1
         if vertex2.name not in self._vertexes:
             self._vertexes[vertex2.name] = vertex2
-        
+
 
 @dataclass
 class SearchInfo:
