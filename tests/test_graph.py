@@ -108,7 +108,6 @@ def test_bfs_search():
     Sligo = Vertex("Sligo")
     graph.add_edge(Dublin, Westport, 50)
     graph.add_edge(Dublin, Galway, 100)
-    graph.add_edge(Westport, Galway, 10)
     graph.add_edge(Westport, Sligo, 300)
     graph.add_edge(Sligo, Galway, 500)
 
