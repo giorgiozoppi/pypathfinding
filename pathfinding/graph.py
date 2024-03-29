@@ -4,7 +4,7 @@ import math
 import heapq
 from collections import deque
 from time import perf_counter_ns
-from typing import List, Dict, Set, Optional, Any
+from typing import List, Dict, Set, Optional, Any, Generator
 from enum import Enum
 from uuid import uuid4
 from dataclasses import dataclass
@@ -118,7 +118,8 @@ class Graph:
         unique_name: str = uuid4().hex,
         graph_type: GraphType = GraphType.UNDIRECTED,
     ):
-        self._adj_list: Dict[Vertex, List[Vertex]] = {}
+        self._adj_list: Dict[str, List[Vertex]] = {}
+        self._vertexes: Dict[str, Vertex] = {}
         self._graph_name = unique_name
         self._graph_type = graph_type
         self._last_vertex_index = 0
@@ -135,13 +136,19 @@ class Graph:
     def adjacency_list(self) -> Dict[Vertex, List[Vertex]]:
         return self._adj_list
 
-    def get_neighbors(self, vertex: Vertex) -> Set[Vertex]:
-        return self._adj_list[vertex]
+    def get_neighbors(self, vertex: Vertex) -> Generator[Vertex, None, None]:
+        neighbors = self._adj_list[vertex.name]
+        for neighbor in neighbors:
+            current_vertex = self.find_vertex_by_name(neighbor[0])
+            if current_vertex is None:
+                continue
+            current_vertex.weight = neighbor[1]
+            current_vertex.predecessor = vertex
+            yield current_vertex
 
     def find_vertex_by_name(self, name: str) -> Optional[Vertex]:
-        for vertex in self._adj_list.keys():
-            if vertex.name == name:
-                return vertex
+        if name in self._vertexes:
+            return self._vertexes[name]
         return None
 
     def load_from_json(self, name: str) -> None:
@@ -149,6 +156,7 @@ class Graph:
         with open(name, mode="r", encoding="utf-8") as file:
             data = json.load(file)
             edges = data["graph"]["edges"]
+            print(edges)
             self._graph_name = data["graph"]["id"]
             for edge in edges:
                 vertex1 = Vertex(edge["source"], current_index)
@@ -157,31 +165,32 @@ class Graph:
                 current_index = current_index + 2
 
     def add_edge(self, vertex1: Vertex, vertex2: Vertex, weight: int) -> None:
-        destination_vertex = vertex2
-        destination_vertex.weight = weight
-        if vertex1 not in self._adj_list:
+        # keep adj list using vertexes name as key and a list of vertexes as value
+        if vertex1.name not in self._adj_list:
             # each vertex will have a unique index
             vertex1.index = self._last_vertex_index
-            self._adj_list[vertex1] = []
+            self._adj_list[vertex1.name] = []
             self._last_vertex_index = self._last_vertex_index + 1
-
-        if vertex2 not in self._adj_list:
+        if vertex2.name not in self._adj_list:
             vertex2.index = self._last_vertex_index
             self._last_vertex_index = self._last_vertex_index + 1
-            self._adj_list[vertex2] = []
-        self._adj_list[vertex1].append(destination_vertex)
-        self._adj_list[vertex1] = sorted(
-            self._adj_list[vertex1], key=lambda x: x.weight
-        )
-
+            self._adj_list[vertex2.name] = []
+        # add the vertexes to the adjacency list
+        # direct
+        self._adj_list[vertex1.name].append((vertex2.name, weight))
+        # this is might an expensive operation to keep the minimum weight at the top
+        # kind of greedy optimization, select always locally the best option
+        self._adj_list[vertex1.name].sort(key=lambda x: x[1])
         if self._graph_type == GraphType.UNDIRECTED:
-            source_vertex = vertex1
-            source_vertex.weight = weight
-            self._adj_list[vertex2].append(source_vertex)
-            self._adj_list[vertex2] = sorted(
-                self._adj_list[vertex2], key=lambda x: x.weight
-            )
+            # add reverse edge
+            self._adj_list[vertex2.name].append((vertex1.name, weight))
+            self._adj_list[vertex2.name].sort(key=lambda x: x[1])
 
+        if vertex1.name not in self._vertexes:
+            self._vertexes[vertex1.name] = vertex1
+        if vertex2.name not in self._vertexes:
+            self._vertexes[vertex2.name] = vertex2
+        
 
 @dataclass
 class SearchInfo:
@@ -201,7 +210,7 @@ def bfs(graph: Graph, vertex: Vertex, info: SearchInfo) -> List[Vertex]:
     queue = deque()
     queue.append(vertex)
     info.visited.add(vertex)
-    while queue.count() > 0:
+    while len(queue) > 0:
         current_vertex = queue.popleft()
         for neighbor in graph.get_neighbors(current_vertex):
             if neighbor not in info.visited:
