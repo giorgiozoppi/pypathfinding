@@ -1,3 +1,11 @@
+"""Graph module to represent a graph and perform searches on it:
+Path finding algorithms implemented:
+- DFS
+- BFS
+- Djikstra
+- A*
+"""
+
 import os
 import json
 import math
@@ -80,18 +88,6 @@ class QueueItem:
     def __lt__(self, other):
         return self.distance < other.distance
 
-    def __le__(self, other):
-        return self.distance <= other.distance
-
-    def __eq__(self, other):
-        return self.distance == other.distance
-
-    def __hash__(self):
-        return hash(self.vertex)
-
-    def __str__(self):
-        return self.vertex.name
-
 
 class PriorityQueue:
     def __init__(self, adjlist: List[Vertex] = []) -> None:
@@ -99,14 +95,18 @@ class PriorityQueue:
         if adjlist:
             for vertex in adjlist:
                 self._queue.append(QueueItem(vertex))
-            heapq.heapify(self._queue)
-
-    def insert(self, vertex: Vertex) -> None:
-        heapq.heappush(QueueItem(vertex))
+        heapq.heapify(self._queue)
 
     def extract_min(self) -> Vertex:
         min_item = heapq.heappop(self._queue)
         return min_item.vertex
+
+    def update(self, vertex: Vertex) -> None:
+        for item in self._queue:
+            if item.vertex.name == vertex.name:
+                item.distance = vertex.distance
+                heapq.heapify(self._queue)
+                break
 
     def is_empty(self) -> bool:
         return len(self._queue) == 0
@@ -136,14 +136,14 @@ class Graph:
     def adjacency_list(self) -> Dict[Vertex, List[Vertex]]:
         return self._adj_list
 
+    def get_vertexes(self) -> Dict[str, Vertex]:
+        return self._vertexes
+
     def get_neighbors(self, vertex: Vertex) -> Generator[Vertex, None, None]:
         neighbors = self._adj_list[vertex.name]
         for neighbor in neighbors:
             current_vertex = self.find_vertex_by_name(neighbor[0])
-            if current_vertex is None:
-                continue
             current_vertex.weight = neighbor[1]
-            current_vertex.predecessor = vertex
             yield current_vertex
 
     def find_vertex_by_name(self, name: str) -> Optional[Vertex]:
@@ -156,7 +156,6 @@ class Graph:
         with open(name, mode="r", encoding="utf-8") as file:
             data = json.load(file)
             edges = data["graph"]["edges"]
-            print(edges)
             self._graph_name = data["graph"]["id"]
             for edge in edges:
                 vertex1 = Vertex(edge["source"], current_index)
@@ -230,8 +229,6 @@ def dfs_search(
         info.edge_to.append(None)
     # Perform the depth first search
     dfs(graph, start_vertex, info)
-    if end_vertex not in info.visited:
-        return False, []
     # Initialize the path stack
     path = deque()
     # If we've not marked as visited the end vertex, then there is no path
@@ -283,7 +280,6 @@ def bfs_search(
         print(vertex)
     end_search = perf_counter_ns()
     performance = end_search - search_start
-    print(f"Elapsed time: {performance} nanoseconds")
     return True, path, performance
 
 
@@ -291,47 +287,34 @@ def djikstra_search(
     graph: Graph, start_vertex: Vertex, end_vertex: Vertex
 ) -> Optional[bool | deque[Vertex]]:
     search_start = perf_counter_ns()
-    for vertex in graph.adjacency_list.keys():
-        vertex.weight = math.inf
+    vertex_map = graph.get_vertexes()
+    start_vertex = graph.find_vertex_by_name(start_vertex.name)
+    for name, vertex in vertex_map.items():
+        vertex.distance = math.inf
         vertex.predecessor = None
-    start_vertex.weight = 0
+        if name == start_vertex.name:
+            vertex.distance = 0
+    queue = PriorityQueue(adjlist=vertex_map.values())
+    queue.update(start_vertex)
     working_set = set()
-    queue = PriorityQueue(adjlist=list(graph.adjacency_list.keys()))
     while not queue.is_empty():
         current_vertex = queue.extract_min()
-        working_set.add(current_vertex)
+        working_set.add(current_vertex.name)
         for neighbor in graph.get_neighbors(current_vertex):
-            if neighbor not in working_set:
-                if neighbor.distance > current_vertex.distance + neighbor.weight:
-                    neighbor.distance = current_vertex.distance + neighbor.weight
-                    neighbor.predecessor = current_vertex
+            if neighbor.distance > current_vertex.distance + neighbor.weight:
+                neighbor.distance = current_vertex.distance + neighbor.weight
+                neighbor.predecessor = current_vertex
+                queue.update(neighbor)
+
     path = deque()
-    if end_vertex in working_set:
+    end_vertex = graph.find_vertex_by_name(end_vertex.name)
+    if end_vertex.name in working_set:
         current_vertex: Vertex = end_vertex
-        while True:
+        while current_vertex is not None:
             path.appendleft(current_vertex)
             current_vertex = current_vertex.predecessor
-            if current_vertex.index == start_vertex.index:
-                break
     else:
-        end_search = perf_counter_ns()
-        performance = end_search - search_start
-        print(f"Elapsed time: {performance} nanoseconds")
-        return False, []
+        return False, [], 0
     end_search = perf_counter_ns()
     performance = end_search - search_start
-    print(f"Elapsed time: {performance} nanoseconds")
-    return True, path, performance
-
-
-if __name__ == "__main__":
-    graph = Graph(unique_name="graph_dfs", graph_type=GraphType.UNDIRECTED)
-    graph.load_from_json("graph.json")
-    source = graph.find_vertex_by_name("Galway")
-    destination = graph.find_vertex_by_name("Belfast")
-    state, path = dfs_search(graph, source, destination)
-    if state:
-        path = [vertex.name for vertex in path]
-        print("A path was found:", " -> ".join(path))
-    else:
-        print("No path was found")
+    return len(path) > 1, path, performance

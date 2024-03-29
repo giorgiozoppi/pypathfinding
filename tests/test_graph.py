@@ -78,6 +78,27 @@ def test_not_found_vertex_by_name():
     vertex = graph.find_vertex_by_name("London")
     assert vertex is None
 
+def test_dfs_fail_search():
+    graph = Graph()
+    graph.load_from_json(GRAPH_FILE)
+    ennis = Vertex("Ennis")
+    dooling = Vertex("Dooling")
+    graph.add_edge(ennis, dooling, 30)
+    source = graph.find_vertex_by_name("Ennis")
+    destination = graph.find_vertex_by_name("Tipperary")
+    state, _ = dfs_search(graph, source, destination)
+    assert state is False
+
+def test_bfs_fail_search():
+    graph = Graph()
+    graph.load_from_json(GRAPH_FILE)
+    ennis = Vertex("Ennis")
+    dooling = Vertex("Dooling")
+    graph.add_edge(ennis, dooling, 30)
+    source = graph.find_vertex_by_name("Ennis")
+    destination = graph.find_vertex_by_name("Tipperary")
+    state, _ = bfs_search(graph, source, destination)
+    assert state is False
 
 def test_dfs_search():
     graph = Graph()
@@ -113,23 +134,34 @@ def test_bfs_search():
 
     state, path, search_time = bfs_search(graph, Dublin, Sligo)
     assert state is True
-    assert state is True
     assert path[0].name == Dublin.name
     assert path[1].name == Westport.name
     assert path[2].name == Sligo.name
     assert search_time > 0
 
 
-"""
 def test_djikstra_search():
     graph = Graph()
-    Dublin = Vertex("Dublin")
-    Galway = Vertex("Galway")
-    Westport = Vertex("Westport")
-    graph.add_edge(Dublin, Galway, 187)
-    graph.add_edge(Dublin, Westport, 222)
-    state, path, search_time = djikstra_search(graph, Dublin, Westport)
+    graph.load_from_json(GRAPH_FILE)
+    source = graph.find_vertex_by_name("Tipperary")
+    destination = graph.find_vertex_by_name("Sligo")
+    state, path, search_time = djikstra_search(graph, source, destination)
     assert state is True
-    assert path == [Dublin, Westport]
+    assert path[0].name == "Tipperary"
+    assert path[1].name == "Limerick"
+    assert path[2].name == "Galway"
+    assert path[3].name == "Castlebar"
+    assert path[4].name == "Sligo"
     assert search_time > 0
-"""
+
+
+def test_djikstra_fail_search():
+    graph = Graph()
+    graph.load_from_json(GRAPH_FILE)
+    ennis = Vertex("Ennis")
+    dooling = Vertex("Dooling")
+    graph.add_edge(ennis, dooling, 30)
+    source = graph.find_vertex_by_name("Ennis")
+    destination = graph.find_vertex_by_name("Tipperary")
+    state, _, _ = djikstra_search(graph, source, destination)
+    assert state is False
