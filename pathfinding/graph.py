@@ -14,7 +14,7 @@ Some design considerations:
 
 - We store also each vertex by name in a dictionary(self._vertexes) to have a quick access to the vertex.
 - Once we've the name of the vertex in adjacency list, we can access the vertex by name using the dictionary,
-  this will keep the ajacency list compact, easy to manage and we avoid deep copying.
+  this will keep the adjacency list compact, easy to manage and we avoid deep copying.
 - The graph can be directed or undirected.
 
 Where a priority queue is used (Shortest Patha and A*), we use a min-heap to keep the minimum value at the top.
@@ -726,6 +726,28 @@ def djikstra_search(
 
 
 def calculate_h_value(graph: Graph, start_vertex: Vertex, end_vertex: Vertex) -> float:
+    """Here we generate the heuristic value for the A* algorithm.
+       In our case the problem doesn't give us the x, y position of the city,
+       so we cannot use the euclidean distance or haversine formula to calculate the distance.
+       The heuristic shall be an admissible heuristic, that is, 
+       it should never overestimate the cost to reach the goal. In our case 
+       we precompute the exact distance from different cities and store
+       in the heuristic table. So we can use this table to calculate the heuristic value.
+       In math a function can be also represented in the form of a table.
+       A* star is a greedy algorithm that uses the heuristic value to select the best path locally.
+       The choice of the heuristic value is crucial to the performance of the algorithm.
+
+    Args:
+        graph (Graph): Graph
+        start_vertex (Vertex): Source Node
+        end_vertex (Vertex): End Node
+
+    Raises:
+        PathNotFound: Whenever a vertex name is not found in the heuristic table.
+
+    Returns:
+        float: The distance between two vertexes contained in the heuristic table.
+    """    
     if not start_vertex or not end_vertex:
         raise PathNotFound("Path not found from start_vertex -> end_vertex")
     try:
@@ -744,7 +766,18 @@ def a_star_search(
     start_vertex: Vertex,
     end_vertex: Vertex,
     heuristic_file: Optional[str] = None,
-) -> Optional[bool | deque[Vertex]]:
+) -> Optional[bool | deque[Vertex] | float]:
+    """A* Search algorithm to find the shortest path between two vertexes.
+
+    Args:
+        graph (Graph): Graph
+        start_vertex (Vertex): Start vertex
+        end_vertex (Vertex): End vertex
+        heuristic_file (Optional[str], optional): Optionally the heuristic table file path. Defaults to None.
+
+    Returns:
+        Optional[bool | deque[Vertex] | float]: Return the path found, the path from source to destination, execution time.
+    """    
     if start_vertex is None or end_vertex is None:
         return False, [], 0
     if heuristic_file:
@@ -758,7 +791,9 @@ def a_star_search(
         return False, [], perf_counter_ns() - search_start
     start_vertex.gvalue = 0
     node_visited = set()
+    # The priority queue is a min-heap based on the value of the heuristic.
     queue = PriorityQueue(algorithm=QueueItemType.ASTAR)
+    # insert the source vertex in the queue
     queue.insert(start_vertex)
     node_visited.add(start_vertex.name)
     path = deque()
@@ -771,6 +806,11 @@ def a_star_search(
                 if n.name not in node_visited:
                     n.predecessor = current_vertex
                     try:
+                        # the values of hvalue and gvalue are updated
+                        # their sum is used to prioritize the vertex in the queue
+                        # smaller is their sum, higher is the priority
+                        # their sum is the fvalue, and its computed in the AStarQueueItem class
+                        # f(x) = h(x) + g(x)
                         n.hvalue = calculate_h_value(graph, n, end_vertex)
                         n.gvalue = current_vertex.gvalue + calculate_h_value(
                             graph, current_vertex, n
@@ -783,6 +823,9 @@ def a_star_search(
     end_vertex = graph.find_vertex_by_name(end_vertex.name)
     start_vertex = graph.find_vertex_by_name(start_vertex.name)
     start_vertex.predecessor = None
+    # here we do the path reconstruction
+    # using the predecessor function
+    # it is very important using the deque data structure
     if end_vertex.name in node_visited:
         current_vertex: Vertex = end_vertex
         while current_vertex is not None:
@@ -790,4 +833,7 @@ def a_star_search(
             current_vertex = current_vertex.predecessor
     else:
         return False, [], perf_counter_ns() - search_start
+    # we assume that to be successful the path must have at least:
+    # - two vertexes
+    # - one edge
     return len(path) > 1, path, perf_counter_ns() - search_start
