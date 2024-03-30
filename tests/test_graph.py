@@ -107,6 +107,29 @@ def test_bfs_fail_search():
     assert state is False
 
 
+def test_dfs_search_from_file():
+    graph = Graph()
+    graph.load_from_json(GRAPH_FILE)
+    source = graph.find_vertex_by_name("Tipperary")
+    destination = graph.find_vertex_by_name("Sligo")
+    state, path, search_time = dfs_search(graph, source, destination)
+    assert state is True
+    assert path[0].name == "Tipperary"
+    assert path[1].name == "Limerick"
+    assert path[2].name == "Killarney"
+    assert path[3].name == "Cork"
+    assert path[4].name == "Waterford"
+    assert path[5].name == "Wexford"
+    assert path[6].name == "Dublin" 
+    assert path[7].name == "Dundalk"
+    assert path[8].name == "Belfast"
+    assert path[9].name == "Sligo"
+    
+    
+    
+    assert search_time > 0
+
+    
 def test_dfs_search():
     graph = Graph()
     Dublin = Vertex("Dublin")

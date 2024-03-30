@@ -248,10 +248,6 @@ class AStarQueueItem(QueueItem):
         Returns:
             float: heuristic value of the vertex.
         """
-        if vertex.hvalue == None:
-            print("eho")
-        if vertex.gvalue == None:
-            print("eho")
         self._fvalue = vertex.gvalue + vertex.hvalue
         return self._fvalue
 
@@ -530,7 +526,6 @@ class HTable(BaseModel):
                 target = g.find_vertex_by_name(target_name)
                 found, path, _ = djikstra_search(g, source, target)
                 if found:
-                    print(f"Path found from {name} -> {target.name}")
                     table_distance = path[-1].distance
                     table[name].append({target.name: table_distance})
                 else:
@@ -668,8 +663,6 @@ def bfs_search(
             break
 
     path.appendleft(start_vertex)
-    for vertex in path:
-        print(vertex)
     end_search = perf_counter_ns()
     performance = end_search - search_start
     return True, path, performance
