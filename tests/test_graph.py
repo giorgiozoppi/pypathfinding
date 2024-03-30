@@ -314,7 +314,7 @@ def test_a_star_search_empty_graph():
     start_vertex = Vertex("Start")
     end_vertex = Vertex("End")
 
-    state, path, search_time = a_star_search(
+    state, path, _ = a_star_search(
         graph, start_vertex, end_vertex, _HEURISTIC_FILE
     )
     assert state is False
