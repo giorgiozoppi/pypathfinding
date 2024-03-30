@@ -1,3 +1,4 @@
+import os.path
 from pathfinding.graph import (
     Graph,
     Vertex,
@@ -6,8 +7,14 @@ from pathfinding.graph import (
     dfs_search,
     bfs_search,
     djikstra_search,
+    PriorityQueue,
+    QueueItemType,
+    a_star_search,
 )
-from pathfinding.graph import PriorityQueue, Vertex, QueueItemType
+
+_HEURISTIC_FILE = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "heuristic_table.json")
+)
 
 
 def test_init():
@@ -248,3 +255,83 @@ def test_priority_queue_is_empty():
     vertex = Vertex("A", distance=10, index=0)
     queue.insert(vertex)
     assert not queue.is_empty()
+
+
+def test_a_star_search():
+    graph = Graph()
+    Dublin = Vertex("Dublin")
+    Galway = Vertex("Galway")
+    Sligo = Vertex("Sligo")
+    graph.add_edge(Dublin, Galway, 100)
+    graph.add_edge(Sligo, Galway, 200)
+
+    state, path, search_time = a_star_search(graph, Dublin, Sligo, _HEURISTIC_FILE)
+    assert state is True
+    assert path[0].name == Dublin.name
+    assert path[1].name == Galway.name
+    assert path[2].name == Sligo.name
+    assert search_time > 0
+
+
+def test_a_star_search_no_path():
+    graph = Graph()
+    Dublin = Vertex("Dublin")
+    Galway = Vertex("Galway")
+    Westport = Vertex("Westport")
+    Sligo = Vertex("Sligo")
+    graph.add_edge(Dublin, Westport, 222)
+    graph.add_edge(Dublin, Galway, 100)
+    graph.add_edge(Westport, Sligo, 300)
+
+    state, path, search_time = a_star_search(graph, Dublin, Sligo, _HEURISTIC_FILE)
+    assert state is False
+    assert len(path) == 0
+    assert search_time > 0
+
+
+def test_a_star_search_invalid_vertices():
+    graph = Graph()
+    Dublin = Vertex("Dublin")
+    Galway = Vertex("Galway")
+    Westport = Vertex("Westport")
+    Sligo = Vertex("Sligo")
+    graph.add_edge(Dublin, Westport, 222)
+    graph.add_edge(Dublin, Galway, 100)
+    graph.add_edge(Westport, Sligo, 300)
+    graph.add_edge(Sligo, Galway, 500)
+
+    state, path, _ = a_star_search(graph, None, Sligo, _HEURISTIC_FILE)
+    assert state is False
+    assert len(path) == 0
+
+    state, path, _ = a_star_search(graph, Dublin, None, _HEURISTIC_FILE)
+    assert state is False
+    assert len(path) == 0
+
+
+def test_a_star_search_empty_graph():
+    graph = Graph()
+    start_vertex = Vertex("Start")
+    end_vertex = Vertex("End")
+
+    state, path, search_time = a_star_search(
+        graph, start_vertex, end_vertex, _HEURISTIC_FILE
+    )
+    assert state is False
+    assert len(path) == 0
+
+
+def test_astart_search_graph():
+    graph = Graph()
+    graph.load_from_json(GRAPH_FILE)
+    graph.create_heuristic_table()
+    source = graph.find_vertex_by_name("Tipperary")
+    destination = graph.find_vertex_by_name("Sligo")
+    state, path, search_time = a_star_search(graph, source, destination)
+    assert state is True
+    assert path[0].name == "Tipperary"
+    assert path[1].name == "Limerick"
+    assert path[2].name == "Galway"
+    assert path[3].name == "Castlebar"
+    assert path[4].name == "Sligo"
+    assert search_time > 0

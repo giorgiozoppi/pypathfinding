@@ -36,13 +36,16 @@ from typing_extensions import override
 from enum import Enum
 from uuid import uuid4
 from dataclasses import dataclass
-from abc import abstractmethod, ABC
+from abc import abstractmethod
 from pydantic import BaseModel
 
 # we suppose to have a kind of graphml file transposed to json
 # in the same folder as the graph.py file
 GRAPH_FOLDER = os.path.dirname(os.path.abspath(__file__))
 GRAPH_FILE = os.path.join(GRAPH_FOLDER, "graph.json")
+
+
+class PathNotFound(Exception): ...
 
 
 class GraphType(Enum):
@@ -225,14 +228,15 @@ class DijkstraQueueItem(QueueItem):
         self.min_index = vertex.distance
 
 
-class AStarQueueItem:
+class AStarQueueItem(QueueItem):
     """Generalization of the QueueItem class for the A* algorithm."""
 
     def __init__(self, vertex: Vertex) -> None:
         """Constructor for the AStarQueueItem class."""
         super().__init__(vertex)
-        self.fvalue: float = 0
-        self.vertex = vertex
+        self._fvalue: float = 0
+        self._hvalue: float = 0
+        self._gvalue: float = 0
 
     @override
     def get_min_index(self, vertex: Vertex) -> float:
@@ -244,8 +248,12 @@ class AStarQueueItem:
         Returns:
             float: heuristic value of the vertex.
         """
-        self.fvalue = vertex.gvalue + vertex.hvalue
-        return self.fvalue
+        if vertex.hvalue == None:
+            print("eho")
+        if vertex.gvalue == None:
+            print("eho")
+        self._fvalue = vertex.gvalue + vertex.hvalue
+        return self._fvalue
 
     @override
     def set_min_index(self, vertex: Vertex) -> None:
@@ -254,8 +262,7 @@ class AStarQueueItem:
         Args:
             vertex (Vertex): heurisitc value of the vertex.
         """
-        self.fvalue = vertex.gvalue + vertex.hvalue
-        self.min_index = self.fvalue
+        self._fvalue = vertex.gvalue + vertex.hvalue
 
 
 def make_queue_item(
@@ -505,11 +512,15 @@ class SearchInfo:
 class HTable(BaseModel):
     """Heuristic table to store the heuristic values."""
 
-    table: Dict[str, Dict[str, float]]
+    table: Dict[str, List[Dict[str, float]]]
 
     @classmethod
     def create(cls, g: Graph, source_names: List[str]):
         table = {}
+        # each site on itself.
+        for target_name in sorted(source_names):
+            table[target_name] = [{target_name: 0.0}]
+
         for target_name in sorted(source_names):
             filtered_sources = [
                 source for source in source_names if source != target_name
@@ -521,10 +532,10 @@ class HTable(BaseModel):
                 if found:
                     print(f"Path found from {name} -> {target.name}")
                     table_distance = path[-1].distance
-                    table[name] = {target.name: table_distance}
+                    table[name].append({target.name: table_distance})
                 else:
                     print(f"No path found from {name} -> {target.name}")
-                    table[name] = {target.name: float("inf")}
+                    table[name].append({target.name: float("inf")})
 
         return cls(table=table)
 
@@ -715,38 +726,68 @@ def djikstra_search(
 
 
 def calculate_h_value(graph: Graph, start_vertex: Vertex, end_vertex: Vertex) -> float:
-    return graph.heuristic_table.table[start_vertex.name][end_vertex.name]
+    if not start_vertex or not end_vertex:
+        raise PathNotFound("Path not found from start_vertex -> end_vertex")
+    try:
+        neighbours_distances = graph.heuristic_table.table[start_vertex.name]
+        for neighbour_distance in neighbours_distances:
+            if end_vertex.name in neighbour_distance:
+                return neighbour_distance[end_vertex.name]
+    except KeyError:
+        raise PathNotFound(
+            f"Path not found from {start_vertex.name} -> {end_vertex.name}"
+        )
 
 
 def a_star_search(
-    graph: Graph, start_vertex: Vertex, end_vertex: Vertex, heristic_file: str
+    graph: Graph,
+    start_vertex: Vertex,
+    end_vertex: Vertex,
+    heuristic_file: Optional[str] = None,
 ) -> Optional[bool | deque[Vertex]]:
     if start_vertex is None or end_vertex is None:
         return False, [], 0
+    if heuristic_file:
+        graph.load_heuristic_table(heuristic_file)
     search_start = perf_counter_ns()
     start_vertex = graph.find_vertex_by_name(start_vertex.name)
     end_vertex = graph.find_vertex_by_name(end_vertex.name)
-    start_vertex.hvalue = calculate_h_value(graph, start_vertex, end_vertex)
+    try:
+        start_vertex.hvalue = calculate_h_value(graph, start_vertex, end_vertex)
+    except PathNotFound as e:
+        return False, [], perf_counter_ns() - search_start
     start_vertex.gvalue = 0
     node_visited = set()
-    queue = PriorityQueue()
+    queue = PriorityQueue(algorithm=QueueItemType.ASTAR)
     queue.insert(start_vertex)
+    node_visited.add(start_vertex.name)
     path = deque()
     while not queue.is_empty():
         current_vertex = queue.extract_min()
         if current_vertex.name == end_vertex.name:
-            # reconstruct the path
-            path.appendleft(current_vertex)
             break
         else:
             for n in graph.get_neighbors(current_vertex):
-                if n not in node_visited:
+                if n.name not in node_visited:
                     n.predecessor = current_vertex
-                    n.hvalue = calculate_h_value(graph, n, end_vertex)
-                    n.gvalue = current_vertex.gvalue + calculate_h_value(
-                        graph, current_vertex, n
-                    )
-                    node_visited.add(n)
-                    queue.insert(n)
-
-    return len(path) > 1, path, 0
+                    try:
+                        n.hvalue = calculate_h_value(graph, n, end_vertex)
+                        n.gvalue = current_vertex.gvalue + calculate_h_value(
+                            graph, current_vertex, n
+                        )
+                        queue.insert(n)
+                        node_visited.add(n.name)
+                    except PathNotFound as e:
+                        print(e)
+                        return False, [], perf_counter_ns() - search_start
+    end_vertex = graph.find_vertex_by_name(end_vertex.name)
+    start_vertex = graph.find_vertex_by_name(start_vertex.name)
+    start_vertex.predecessor = None
+    if end_vertex.name in node_visited:
+        current_vertex: Vertex = end_vertex
+        while current_vertex is not None:
+            path.appendleft(current_vertex)
+            current_vertex = current_vertex.predecessor
+    else:
+        return False, [], perf_counter_ns() - search_start
+    return len(path) > 1, path, perf_counter_ns() - search_start
