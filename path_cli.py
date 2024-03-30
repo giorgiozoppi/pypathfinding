@@ -14,17 +14,16 @@ def ask_for_input(graph: Graph)-> tuple[Vertex, Vertex]:
 def test(command: str, filename: str, heuristic_file: str = None):
     graph.load_from_json(filename)
 
-    start, end = ask_for_input(graph) 
     # create once for all the heuristic table for the graph to use A* algorithm.
     # an heuristic table is a dictionary that contains the heuristic value for each vertex in the graph.
     # In math a table can be seen like a function.
     if command == "heuristic_table":
-        graph.create_heuristic_table(end)
+        graph.create_heuristic_table()
         graph.heuristic_table.save("heuristic_table.json")
-        graph.create_heuristic_table(end)
         rich.print("[green bold]Heuristic table created[/green bold]")
         return
     elif command == "dfs":
+        start, end = ask_for_input(graph) 
         success, path, performance = dfs_search(graph, start, end)
         if success:
             csv_path = ''.join([f"{vertex.name} -> " for vertex in path])
@@ -35,6 +34,7 @@ def test(command: str, filename: str, heuristic_file: str = None):
         else:
             rich.print(f"[red bold]No path found dfs search[/red bold]")
     elif command == "bfs":
+        start, end = ask_for_input(graph) 
         success, path, performance = bfs_search(graph, start, end)
         if success:
             csv_path = ''.join([f"{vertex.name} -> " for vertex in path])
@@ -46,6 +46,7 @@ def test(command: str, filename: str, heuristic_file: str = None):
             rich.print(f"[red bold]No path found bfs search[/red bold]")
 
     elif command == "shortest_path":
+        start, end = ask_for_input(graph) 
         success, path, performance = djikstra_search(graph, start, end)
         if success:
             csv_path = ''.join([f"{vertex.name} -> " for vertex in path])
@@ -56,6 +57,7 @@ def test(command: str, filename: str, heuristic_file: str = None):
         else:
             rich.print(f"[red bold]No path found shortest path search[/red bold]")
     elif command == "a_star":
+        start, end = ask_for_input(graph) 
         success, path, performance = a_star_search(graph, start, end, heuristic_file)
     else:
         rich.print("[red bold]Invalid command name[/red bold]")

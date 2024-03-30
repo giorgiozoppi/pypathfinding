@@ -404,17 +404,14 @@ class Graph:
             current_vertex.weight = neighbor[1]
             yield current_vertex
 
-    def create_heuristic_table(self, destination: Vertex) -> None:
+    def create_heuristic_table(self) -> None:
         """Create a heuristic table based on the source names and the destination vertex.
 
         Args:
             source_names (List[str]): List of source names.
             destination (Vertex): Destination vertex.
         """
-        current_names = list(
-            filter(lambda x: x != destination.name, self._vertex_names)
-        )
-        self.heuristic_table = HTable.create(self, current_names, destination)
+        self.heuristic_table = HTable.create(self, self._vertex_names)
 
     def find_vertex_by_name(self, name: str) -> Optional[Vertex]:
         """Find a vertex by name.
@@ -511,18 +508,23 @@ class HTable(BaseModel):
     table: Dict[str, Dict[str, float]]
 
     @classmethod
-    def create(cls, g: Graph, source_names: List[str], destination: Vertex):
+    def create(cls, g: Graph, source_names: List[str]):
         table = {}
-        for name in sorted(source_names):
-            source = g.find_vertex_by_name(name)
-            found, path, _ = djikstra_search(g, source, destination)
-            if found:
-                print(f"Path found from {name} -> {destination.name}")
-                table_distance = path[-1].distance
-                table[name] = {destination.name: table_distance}
-            else:
-                print(f"No path found from {name} -> {destination.name}")
-                table[name] = {destination.name: float("inf")}
+        for target_name in sorted(source_names):
+            filtered_sources = [
+                source for source in source_names if source != target_name
+            ]
+            for name in sorted(filtered_sources):
+                source = g.find_vertex_by_name(name)
+                target = g.find_vertex_by_name(target_name)
+                found, path, _ = djikstra_search(g, source, target)
+                if found:
+                    print(f"Path found from {name} -> {target.name}")
+                    table_distance = path[-1].distance
+                    table[name] = {target.name: table_distance}
+                else:
+                    print(f"No path found from {name} -> {target.name}")
+                    table[name] = {target.name: float("inf")}
 
         return cls(table=table)
 
@@ -712,21 +714,19 @@ def djikstra_search(
     return len(path) > 1, path, performance
 
 
-def calculate_h_value(start_vertex: Vertex, end_vertex: Vertex) -> float:
-    return 0
+def calculate_h_value(graph: Graph, start_vertex: Vertex, end_vertex: Vertex) -> float:
+    return graph.heuristic_table.table[start_vertex.name][end_vertex.name]
 
 
 def a_star_search(
-    graph: Graph, start_vertex: Vertex, end_vertex: Vertex, 
-    heristic_file: str
+    graph: Graph, start_vertex: Vertex, end_vertex: Vertex, heristic_file: str
 ) -> Optional[bool | deque[Vertex]]:
     if start_vertex is None or end_vertex is None:
         return False, [], 0
     search_start = perf_counter_ns()
     start_vertex = graph.find_vertex_by_name(start_vertex.name)
     end_vertex = graph.find_vertex_by_name(end_vertex.name)
-    start_vertex.distance = 0
-    start_vertex.hvalue = calculate_h_value(start_vertex, end_vertex)
+    start_vertex.hvalue = calculate_h_value(graph, start_vertex, end_vertex)
     start_vertex.gvalue = 0
     node_visited = set()
     queue = PriorityQueue()
@@ -739,5 +739,14 @@ def a_star_search(
             path.appendleft(current_vertex)
             break
         else:
-            pass
+            for n in graph.get_neighbors(current_vertex):
+                if n not in node_visited:
+                    n.predecessor = current_vertex
+                    n.hvalue = calculate_h_value(graph, n, end_vertex)
+                    n.gvalue = current_vertex.gvalue + calculate_h_value(
+                        graph, current_vertex, n
+                    )
+                    node_visited.add(n)
+                    queue.insert(n)
+
     return len(path) > 1, path, 0
