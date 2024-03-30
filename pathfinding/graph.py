@@ -37,6 +37,7 @@ from enum import Enum
 from uuid import uuid4
 from dataclasses import dataclass
 from abc import abstractmethod, ABC
+from pydantic import BaseModel
 
 # we suppose to have a kind of graphml file transposed to json
 # in the same folder as the graph.py file
@@ -63,14 +64,14 @@ class Vertex:
     - distance is the distance from the start vertex.
     """
 
-    def __init__(self, name: str, index: int = 0) -> None:
+    def __init__(self, name: str, distance=float("inf"), index: int = 0) -> None:
         self._name: str = name
         self._weight: int = 0
         self._index: int = index
         self._predecessor: Optional[Vertex] = None
-        self._distance: float = math.inf
-        self._h_value: float = 0
-        self._g_value: float = 0
+        self._distance: float = distance
+        self._h_value: float = float("inf")
+        self._g_value: float = 0.0
 
     @property
     def distance(self) -> int:
@@ -221,6 +222,7 @@ class DijkstraQueueItem(QueueItem):
             vertex (Vertex): Vertex
         """
         self.distance = vertex.distance
+        self.min_index = vertex.distance
 
 
 class AStarQueueItem:
@@ -230,6 +232,7 @@ class AStarQueueItem:
         """Constructor for the AStarQueueItem class."""
         super().__init__(vertex)
         self.fvalue: float = 0
+        self.vertex = vertex
 
     @override
     def get_min_index(self, vertex: Vertex) -> float:
@@ -252,9 +255,12 @@ class AStarQueueItem:
             vertex (Vertex): heurisitc value of the vertex.
         """
         self.fvalue = vertex.gvalue + vertex.hvalue
+        self.min_index = self.fvalue
 
 
-def make_queue_item(vertex: Vertex, kind: QueueItemType = QueueItemType.DIJKSTRA) -> QueueItem:
+def make_queue_item(
+    vertex: Vertex, kind: QueueItemType = QueueItemType.DIJKSTRA
+) -> QueueItem:
     """Make queue item based on the kind of the queue item.
        QueueItem is an abstract class that allow to generalize the items on the work queue.
        We can think a QueueItem as wrapper around the vertex to keep the minimum value at the top.
@@ -272,8 +278,8 @@ def make_queue_item(vertex: Vertex, kind: QueueItemType = QueueItemType.DIJKSTRA
 
 
 class PriorityQueue:
-    """Priority Queue class the min-heap.
-    """    
+    """Priority Queue class the min-heap."""
+
     def __init__(self, algorithm: QueueItemType, adjlist: List[Vertex] = []) -> None:
         """Constructor
            Here we've two cases:
@@ -281,7 +287,7 @@ class PriorityQueue:
            - We can fill up the queue with a list of all vetrexes in the graph.
         Args:
             adjlist (List[Vertex], optional): List of all vertexes. Defaults to [].
-        """        
+        """
         self._queue: List[QueueItem] = []
         self._algorithm = algorithm
         if adjlist:
@@ -295,44 +301,47 @@ class PriorityQueue:
 
         Args:
             vertex (Vertex): Vertex
-        """        
-        heapq.heappush(self._queue, make_queue_item(vertex, kind=self._algorithm))
+        """
+        item = make_queue_item(vertex, kind=self._algorithm)
+        heapq.heappush(self._queue, item)
 
     def extract_min(self) -> Vertex:
         """Extract the Vertex with minimum value from the queue.
 
         Returns:
             Vertex: Vertex with minimum value.
-        """        
+        """
         min_item = heapq.heappop(self._queue)
-        return min_item.vertex
+        vertex = min_item.vertex
+        return vertex
 
     def update(self, vertex: Vertex) -> None:
         """Add a vertex to the queue and restore the min-heap property.
 
         Args:
             vertex (Vertex): Vertex to add.
-        """        
+        """
         for item in self._queue:
             if item.vertex.name == vertex.name:
                 item.set_min_index(vertex)
-                heapq.heapify(self._queue)
                 break
+        heapq.heapify(self._queue)
 
     def is_empty(self) -> bool:
         """Return True if the queue is empty.
 
         Returns:
             bool: True if the queue is empty.
-        """        
+        """
         return len(self._queue) == 0
 
 
 class Graph:
     """Class to represent a graph.
-       A graph can be directed or undirected and it has a unique name.
-       During Vertex insertion, we assign a unique index to each vertex.
-    """    
+    A graph can be directed or undirected and it has a unique name.
+    During Vertex insertion, we assign a unique index to each vertex.
+    """
+
     def __init__(
         self,
         unique_name: str = uuid4().hex,
@@ -343,6 +352,8 @@ class Graph:
         self._graph_name = unique_name
         self._graph_type = graph_type
         self._last_vertex_index = 0
+        self.heuristic_table = None
+        self._vertex_names: List[str] = []
 
     @property
     def name(self) -> str:
@@ -350,7 +361,7 @@ class Graph:
 
         Returns:
             str: Name of the graph.
-        """        
+        """
         return self._graph_name
 
     @property
@@ -359,7 +370,7 @@ class Graph:
 
         Returns:
             GraphType: Type of the graph.
-        """        
+        """
         return self._graph_type
 
     @property
@@ -368,7 +379,7 @@ class Graph:
 
         Returns:
             Dict[str, List[Vertex]]: The adjacency list of the graph. Each vertex is indexed by name.
-        """        
+        """
         return self._adj_list
 
     def get_vertexes(self) -> Dict[str, Vertex]:
@@ -376,7 +387,7 @@ class Graph:
 
         Returns:
             Dict[str, Vertex]: All vertexes in the graph indexed by name.
-        """        
+        """
         return self._vertexes
 
     def get_neighbors(self, vertex: Vertex) -> Generator[Vertex, None, None]:
@@ -386,12 +397,24 @@ class Graph:
             vertex (Vertex): Vertex
         Yields:
             Generator[Vertex, None, None]: Generator of all neighbors of the vertex.
-        """        
+        """
         neighbors = self._adj_list[vertex.name]
         for neighbor in neighbors:
             current_vertex = self.find_vertex_by_name(neighbor[0])
             current_vertex.weight = neighbor[1]
             yield current_vertex
+
+    def create_heuristic_table(self, destination: Vertex) -> None:
+        """Create a heuristic table based on the source names and the destination vertex.
+
+        Args:
+            source_names (List[str]): List of source names.
+            destination (Vertex): Destination vertex.
+        """
+        current_names = list(
+            filter(lambda x: x != destination.name, self._vertex_names)
+        )
+        self.heuristic_table = HTable.create(self, current_names, destination)
 
     def find_vertex_by_name(self, name: str) -> Optional[Vertex]:
         """Find a vertex by name.
@@ -401,7 +424,7 @@ class Graph:
 
         Returns:
             Optional[Vertex]: Vertex if found, None otherwise.`
-        """        
+        """
         if name in self._vertexes:
             return self._vertexes[name]
         return None
@@ -411,29 +434,42 @@ class Graph:
 
         Args:
             name (str): Path to the json file.
-        """        
+        """
         current_index = 0
         with open(name, mode="r", encoding="utf-8") as file:
             data = json.load(file)
             edges = data["graph"]["edges"]
             self._graph_name = data["graph"]["id"]
+            vertexes = data["graph"]["nodes"]
+            for vertex in vertexes:
+                self._vertex_names.append(vertex["id"])
             for edge in edges:
                 vertex1 = Vertex(edge["source"], current_index)
                 vertex2 = Vertex(edge["target"], current_index + 1)
                 self.add_edge(vertex1, vertex2, edge["weight"])
                 current_index = current_index + 2
 
+    def load_heuristic_table(self, name: str) -> None:
+        """Load from a json file the heuristic table.
+
+        Args:
+            name (str): Path to the json file.
+        """
+        with open(name, mode="r", encoding="utf-8") as file:
+            data = json.load(file)
+            self.heuristic_table = HTable(**data)
+
     def add_edge(self, vertex1: Vertex, vertex2: Vertex, weight: int) -> None:
         """It adds an edge between two vertexes with a weight.
            If the vertexes are not in the adjacency list, they will be added.
            If the graph is undirected, it will add the reverse edge.
-           Also it keeps sorted the adjacency list by weight. 
+           Also it keeps sorted the adjacency list by weight.
            This might be useful where we don't want to use a priority queue (BFS,DFS).
         Args:
             vertex1 (Vertex): Source vertex.
             vertex2 (Vertex): Destination vertex.
             weight (int): Weight of the edge.
-        """        
+        """
         # keep adj list using vertexes name as key and a list of vertexes as value
         if vertex1.name not in self._adj_list:
             # each vertex will have a unique index
@@ -463,10 +499,37 @@ class Graph:
 
 @dataclass
 class SearchInfo:
-    """Context to pass thru recursive calls of the search algorithms.
-    """    
+    """Context to pass thru recursive calls of the search algorithms."""
+
     visited: Set[Vertex]
     edge_to: List[Vertex]
+
+
+class HTable(BaseModel):
+    """Heuristic table to store the heuristic values."""
+
+    table: Dict[str, Dict[str, float]]
+
+    @classmethod
+    def create(cls, g: Graph, source_names: List[str], destination: Vertex):
+        table = {}
+        for name in sorted(source_names):
+            source = g.find_vertex_by_name(name)
+            found, path, _ = djikstra_search(g, source, destination)
+            if found:
+                print(f"Path found from {name} -> {destination.name}")
+                table_distance = path[-1].distance
+                table[name] = {destination.name: table_distance}
+            else:
+                print(f"No path found from {name} -> {destination.name}")
+                table[name] = {destination.name: float("inf")}
+
+        return cls(table=table)
+
+    def save(self, name: str) -> None:
+        json_dict = json.loads(self.model_dump_json())
+        with open(name, mode="w", encoding="utf-8") as file:
+            json.dump(json_dict, file)
 
 
 def dfs(graph: Graph, vertex: Vertex, info: SearchInfo) -> List[Vertex]:
@@ -479,7 +542,7 @@ def dfs(graph: Graph, vertex: Vertex, info: SearchInfo) -> List[Vertex]:
 
     Returns:
         List[Vertex]: List of vertexes in the path.
-    """    
+    """
     info.visited.add(vertex)
     for neighbor in graph.get_neighbors(vertex):
         if neighbor not in info.visited:
@@ -497,7 +560,7 @@ def bfs(graph: Graph, vertex: Vertex, info: SearchInfo) -> List[Vertex]:
 
     Returns:
         List[Vertex]: List of vertexes in the path.
-    """    
+    """
     queue = deque()
     queue.append(vertex)
     info.visited.add(vertex)
@@ -522,7 +585,7 @@ def dfs_search(
 
     Returns:
         Optional[bool | deque[Vertex] | float]: Path found, path from source to destination, execution time.
-    """    
+    """
     if start_vertex is None or end_vertex is None:
         return False, [], 0
     search_start = perf_counter_ns()
@@ -555,7 +618,7 @@ def dfs_search(
 
 def bfs_search(
     graph: Graph, start_vertex: Vertex, end_vertex: Vertex
-) -> Optional[bool | deque[Vertex]| float]:
+) -> Optional[bool | deque[Vertex] | float]:
     """Perform a breadth first search on the graph.
 
     Args:
@@ -565,7 +628,7 @@ def bfs_search(
 
     Returns:
         Optional[bool | deque[Vertex]| float]: Path found, path from source to destination, execution time.
-    """    
+    """
     if start_vertex is None or end_vertex is None:
         return False, [], 0
     search_start = perf_counter_ns()
@@ -600,8 +663,8 @@ def bfs_search(
 
 
 def djikstra_search(
-    graph: Graph, start_vertex: Vertex, end_vertex: Vertex
-) -> Optional[bool | deque[Vertex]| float]:
+    graph: Graph, start_vertex: Vertex, end_vertex: Vertex, dump: bool = False
+) -> Optional[bool | deque[Vertex] | float]:
     """Perform Djikstra Shortest Path algorithm on the graph.
 
     Args:
@@ -611,8 +674,8 @@ def djikstra_search(
 
     Returns:
         Optional[bool | deque[Vertex]| float]: Path found, path from source to destination, execution time.
-    """    
-    
+    """
+
     if start_vertex is None or end_vertex is None:
         return False, [], 0
     search_start = perf_counter_ns()
@@ -653,8 +716,9 @@ def calculate_h_value(start_vertex: Vertex, end_vertex: Vertex) -> float:
     return 0
 
 
-def astar_search(
-    graph: Graph, start_vertex: Vertex, end_vertex: Vertex
+def a_star_search(
+    graph: Graph, start_vertex: Vertex, end_vertex: Vertex, 
+    heristic_file: str
 ) -> Optional[bool | deque[Vertex]]:
     if start_vertex is None or end_vertex is None:
         return False, [], 0

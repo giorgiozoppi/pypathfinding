@@ -7,6 +7,7 @@ from pathfinding.graph import (
     bfs_search,
     djikstra_search,
 )
+from pathfinding.graph import PriorityQueue, Vertex, QueueItemType
 
 
 def test_init():
@@ -154,6 +155,26 @@ def test_djikstra_search():
     assert search_time > 0
 
 
+def test_djikstra_search_killarney_sligo():
+    graph = Graph()
+    graph.load_from_json(GRAPH_FILE)
+    source = graph.find_vertex_by_name("Killarney")
+    destination = graph.find_vertex_by_name("Sligo")
+    state, _, search_time = djikstra_search(graph, source, destination)
+    assert state is True
+    assert search_time > 0
+
+
+def test_djikstra_search_castle_bar_sligo():
+    graph = Graph()
+    graph.load_from_json(GRAPH_FILE)
+    source = graph.find_vertex_by_name("Castlebar")
+    destination = graph.find_vertex_by_name("Sligo")
+    state, _, search_time = djikstra_search(graph, source, destination)
+    assert state is True
+    assert search_time > 0
+
+
 def test_djikstra_fail_search():
     graph = Graph()
     graph.load_from_json(GRAPH_FILE)
@@ -164,3 +185,66 @@ def test_djikstra_fail_search():
     destination = graph.find_vertex_by_name("Tipperary")
     state, _, _ = djikstra_search(graph, source, destination)
     assert state is False
+
+
+def test_djikstra_search_cork_sligo():
+    graph = Graph()
+    graph.load_from_json(GRAPH_FILE)
+    source = graph.find_vertex_by_name("Cork")
+    destination = graph.find_vertex_by_name("Sligo")
+    state, _, search_time = djikstra_search(graph, source, destination)
+    assert state is True
+    assert search_time > 0
+
+
+def test_priority_queue_insert():
+    queue = PriorityQueue(QueueItemType.DIJKSTRA)
+    vertex1 = Vertex("A", 0)
+    vertex2 = Vertex("B", 1)
+    vertex3 = Vertex("C", 2)
+    vertex1.distance = 10
+    vertex2.distance = 5
+    vertex3.distance = 15
+    queue.insert(vertex1)
+    queue.insert(vertex2)
+    queue.insert(vertex3)
+    order_names = []
+    assert not queue.is_empty()
+    while not queue.is_empty():
+        vertex_tmp = queue.extract_min()
+        order_names.append(vertex_tmp.name)
+    assert order_names == ["B", "A", "C"]
+
+
+def test_priority_queue_extract_min():
+    queue = PriorityQueue(QueueItemType.DIJKSTRA)
+    vertex1 = Vertex(name="A", distance=10, index=0)
+    vertex2 = Vertex(name="B", distance=5, index=1)
+    vertex3 = Vertex(name="C", distance=15, index=2)
+    queue.insert(vertex1)
+    queue.insert(vertex2)
+    queue.insert(vertex3)
+    min_vertex = queue.extract_min()
+    assert min_vertex.name == vertex2.name
+
+
+def test_priority_queue_update():
+    queue = PriorityQueue(QueueItemType.DIJKSTRA)
+    vertex1 = Vertex("A", distance=20, index=0)
+    vertex2 = Vertex("B", distance=2, index=1)
+    vertex3 = Vertex("C", distance=10, index=2)
+    queue.insert(vertex1)
+    queue.insert(vertex2)
+    queue.insert(vertex3)
+    vertex2.distance = 30
+    queue.update(vertex2)
+    min_vertex = queue.extract_min()
+    assert min_vertex.name == vertex3.name
+
+
+def test_priority_queue_is_empty():
+    queue = PriorityQueue(QueueItemType.DIJKSTRA)
+    assert queue.is_empty()
+    vertex = Vertex("A", distance=10, index=0)
+    queue.insert(vertex)
+    assert not queue.is_empty()
